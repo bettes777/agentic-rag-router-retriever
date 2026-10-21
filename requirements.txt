@@ -1,0 +1,18 @@
+# Package versions were not recorded in the original run, so these are unpinned.
+# Note: the notebook overrides an internal CrewAI prompt string (I18N_DEFAULT._prompts),
+# which may stop working in a future CrewAI release.
+crewai
+crewai-tools
+crewai[azure-ai-inference]
+litellm
+langchain
+langchain-openai
+langchain-community
+langchain-tavily
+langchain-classic
+tavily-python
+faiss-cpu
+pypdf
+tiktoken
+pandas
+python-dotenv
