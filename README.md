@@ -2,8 +2,6 @@
 
 A two-agent CrewAI system that answers questions from either a static PDF knowledge base or the live web, choosing the source per question and logging every step.
 
-Built as a course-end project for the **Post Graduate Program in Applied Agentic AI** (Virginia Tech and Simplilearn).
-
 ## Files
 
 | File | Purpose |
