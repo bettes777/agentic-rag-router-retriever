@@ -102,7 +102,7 @@ Run 4 appears twice under `question_received` in the trace because that cell was
 - **Structured outputs** (`output_pydantic`) make the routing decision machine-readable and easy to log.
 - **Callbacks and verbose mode** support the traceability requirement.
 - **Native tool ecosystem** (`crewai_tools.PDFSearchTool`) and easy wrapping of LangChain tools such as Tavily.
-- It was also the framework used in the course modules, so the setup (Azure LLM, prompt-shield workaround) was already proven.
+- It was also the framework used in a course module from my agentic AI program, so the setup (Azure LLM, prompt-shield workaround) was already proven.
 
 Alternatives considered: LangGraph offers finer control over branching but needs more code for the same result; a single LangChain agent would blur the router and retriever roles the project asks to separate.
 
@@ -114,13 +114,13 @@ Alternatives considered: LangGraph offers finer control over branching but needs
 
 *What happened in the final run:* `PDFSearchTool` reached the Azure API, but indexing failed with `RateLimitError: 429 – Token limit will exceed based on estimated request tokens` during the upsert step, and the system switched to the FAISS fallback. The exact cause is not confirmed. One factor: in that run `PDFSearchTool` was still configured with an incorrect embedding deployment name (see the next point); the gateway appears to have applied its rate limit before checking the name. So this run does not show whether `PDFSearchTool` would work once correctly configured. All PDF answers in the demo come from the FAISS backend, as the trace log's `backend` entries show. With the corrected name and an unthrottled moment, the same code would try `PDFSearchTool` first again with no changes.
 
-**Finding the embedding deployment name.** The course gateway's embedding deployment name was not documented. The first guess (`text-embedding-3-small`) returned `404 DeploymentNotFound`. A small diagnostic cell (after Step 3) tested common names and found `text-embedding-ada-002`. Because the notebook kernel kept the old value in memory, an extra cell before Step 8 sets the correct name explicitly and clears the cached index before the first PDF search. Both cells were kept in the notebook as evidence of the troubleshooting.
+**Finding the embedding deployment name.** The gateway's embedding deployment name was not documented. The first guess (`text-embedding-3-small`) returned `404 DeploymentNotFound`. A small diagnostic cell (after Step 3) tested common names and found `text-embedding-ada-002`. Because the notebook kernel kept the old value in memory, an extra cell before Step 8 sets the correct name explicitly and clears the cached index before the first PDF search. Both cells were kept in the notebook as evidence of the troubleshooting.
 
 **Embedding rate limits.** The Azure gateway throttled embedding requests in the earlier RAG project. The FAISS fallback embeds in batches of 5 with a 15-second pause and saves the index to disk, so the build happens only once. For the 9-chunk summary PDF it took well under a minute; the earlier three-report RAG project (309 chunks) took 10–15 minutes.
 
 **Azure prompt shield.** CrewAI's default "force final answer" prompt wording triggered Azure's jailbreak filter. The notebook overrides that one internal prompt string. This relies on a CrewAI internal (`I18N_DEFAULT._prompts`) and may break on a future CrewAI upgrade.
 
-**Empty LLM responses.** In the course demo, `gpt-5-mini` once returned an empty response with `max_completion_tokens=1500`. The limit was raised to 4000. A possible explanation is that reasoning models use part of the token budget internally, but this was not confirmed.
+**Empty LLM responses.** `Gpt-5-mini` once returned an empty response with `max_completion_tokens=1500`. The limit was raised to 4000. A possible explanation is that reasoning models use part of the token budget internally, but this was not confirmed.
 
 **Tavily tool naming.** The project specifies `TavilySearchResults`. LangChain has been moving Tavily into the separate `langchain-tavily` package (`TavilySearch`), so the notebook uses `TavilySearchResults` when available and falls back to `TavilySearch` otherwise, reporting which one ran.
 
