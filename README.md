@@ -97,14 +97,14 @@ Run 4 appears twice under `question_received` in the trace because that cell was
 
 ## 5. Why CrewAI
 
-- **Role-based agents** (role, goal, backstory, tools) map directly to the Router/Retriever design the project describes.
+- **Role-based agents** (role, goal, backstory, tools) map directly to the Router/Retriever design.
 - **Built-in task chaining** (`context=[...]`) gives a clear, explicit input-output handoff between agents without custom plumbing.
 - **Structured outputs** (`output_pydantic`) make the routing decision machine-readable and easy to log.
 - **Callbacks and verbose mode** support the traceability requirement.
 - **Native tool ecosystem** (`crewai_tools.PDFSearchTool`) and easy wrapping of LangChain tools such as Tavily.
-- It was also the framework used in a course module from my agentic AI program, so the setup (Azure LLM, prompt-shield workaround) was already proven.
+- I had used it before, so the setup (Azure LLM, prompt-shield workaround) was already proven.
 
-Alternatives considered: LangGraph offers finer control over branching but needs more code for the same result; a single LangChain agent would blur the router and retriever roles the project asks to separate.
+Alternatives considered: LangGraph offers finer control over branching but needs more code for the same result; a single LangChain agent would blur the router and retriever roles this design keeps separate.
 
 ## 6. Challenges and trade-offs
 
@@ -122,7 +122,7 @@ Alternatives considered: LangGraph offers finer control over branching but needs
 
 **Empty LLM responses.** `Gpt-5-mini` once returned an empty response with `max_completion_tokens=1500`. The limit was raised to 4000. A possible explanation is that reasoning models use part of the token budget internally, but this was not confirmed.
 
-**Tavily tool naming.** The project specifies `TavilySearchResults`. LangChain has been moving Tavily into the separate `langchain-tavily` package (`TavilySearch`), so the notebook uses `TavilySearchResults` when available and falls back to `TavilySearch` otherwise, reporting which one ran.
+**Tavily tool naming.** The original design used `TavilySearchResults`. LangChain has been moving Tavily into the separate `langchain-tavily` package (`TavilySearch`), so the notebook uses `TavilySearchResults` when available and falls back to `TavilySearch` otherwise, reporting which one ran.
 
 **Overlapping scope between routes.** The report itself discusses AI governance, so a question such as "what is happening with UN AI governance?" could reasonably go to PDF or WEB. The router's rules resolve this by time: what the Panel *says or found* goes to PDF; anything *current* or after July 2026 goes to WEB. Ambiguous questions remain the main source of routing errors, which is why the router's reason is logged.
 
@@ -132,9 +132,10 @@ Alternatives considered: LangGraph offers finer control over branching but needs
 
 **Trace capture limits.** The logger uses two CrewAI hooks. `task_callback` and the custom tool wrappers recorded reliably: task completions, routing decisions, final answers, and each tool call with its backend. `step_callback` captured agents' final answers but not the intermediate tool-call steps, likely because this CrewAI version passes step objects in a different shape than the logger expected. Tool usage is therefore evidenced by the backend entries logged inside each tool rather than by `step_callback`. The full step-by-step detail is still visible in the notebook's verbose output.
 
-**Grounding is not guaranteed.** Checking the answers against the source PDF found two issues worth noting:
+**Grounding is not guaranteed.** Checking the answers against their sources found three issues worth noting:
 - In Run 4, the answer says the length of certain software tasks AI systems can complete is "halving every 4–7 months". The report says it is *doubling*. The routing and retrieval were correct, but the model misstated a retrieved fact, and the citation format alone did not catch it.
 - In Run 3 (LLM route, no retrieval), the answer still ended with a `Sources:` list of academic papers, cited from the model's own knowledge rather than from anything retrieved. The answer itself noted that it had not retrieved them.
+- In Run 2 (WEB route), the question asked for "this week's" news. The run was on 4 October 2026, but the articles the search returned were dated 3 and 6 August 2026, and the answer presented them as this week's developments. The routing was correct; the search returned older results and nothing checked their dates.
 
 This is a reason to add an answer-checking step (see improvements below).
 
@@ -146,5 +147,6 @@ This is a reason to add an answer-checking step (see improvements below).
 - Capture intermediate tool steps in `step_callback` by adapting it to the step-object format of the installed CrewAI version.
 - Add a "both" route that combines PDF and web evidence for questions that need each.
 - Add an evaluator agent that checks the answer against the retrieved passages before returning it (this would have caught the "halving"/"doubling" error in Run 4).
+- Pass the current date to the web search and check result dates for time-sensitive questions (this would have caught the stale results in Run 2).
 - Index the full report once rate limits allow, instead of only the Executive summary.
 - Cache web results and reuse the vector index across sessions.
